@@ -13,7 +13,7 @@ random_t *random_cria(void) {
     self = malloc(sizeof(*self));
     assert(self != NULL);
     
-    self->seed = 0;
+    self->seed = clock(); 
 
     return self;
 }
@@ -29,9 +29,8 @@ err_t random_leitura(void *disp, int id, int *pvalor) {
     err_t err = ERR_OK;
     switch (id) {
         case 0:     // LEITURA
-            self->seed = clock();       // cade vez que é chamado gera uma seed nova
             srand(self->seed);
-            *pvalor = rand() % 100;     // para deixar o valor aleatório entre 0 e 99
+            *pvalor = (rand() % 100) + 1;     // para deixar o valor aleatório entre 1 e 100
             break;
         default:
             err = ERR_DISP_INV;
