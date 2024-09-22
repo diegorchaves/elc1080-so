@@ -15,4 +15,4 @@ void random_destroi(random_t *self);
 
 err_t random_leitura(void *disp, int id, int *pvalor);
 
-#endif // RELOGIO_H
+#endif
