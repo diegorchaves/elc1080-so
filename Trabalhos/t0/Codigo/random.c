@@ -13,7 +13,7 @@ random_t *random_cria(void) {
     self = malloc(sizeof(*self));
     assert(self != NULL);
     
-    self->seed = clock(); 
+    self->seed = time(0); 
 
     return self;
 }
