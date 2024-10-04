@@ -16,6 +16,21 @@
 // CONSTANTES E TIPOS {{{1
 // intervalo entre interrupções do relógio
 #define INTERVALO_INTERRUPCAO 50   // em instruções executadas
+#define QUANTIDADE_PROCESSOS 4
+
+int PID = 0;
+
+struct processo_t {
+  int PC;
+  int A;
+  int X;
+  int complemento;
+  int erro;
+  int pid;
+  bool vivo;
+  console_t *console;
+  terminal_t *terminal;
+};
 
 struct so_t {
   cpu_t *cpu;
@@ -24,6 +39,8 @@ struct so_t {
   console_t *console;
   bool erro_interno;
   // t1: tabela de processos, processo corrente, pendências, etc
+  processo_t processos[QUANTIDADE_PROCESSOS];
+  processo_t *processo_atual;
 };
 
 
@@ -48,6 +65,9 @@ so_t *so_cria(cpu_t *cpu, mem_t *mem, es_t *es, console_t *console)
   self->es = es;
   self->console = console;
   self->erro_interno = false;
+
+  // t1: tabela de processos, processo corrente
+  self->processo_atual = NULL;
 
   // quando a CPU executar uma instrução CHAMAC, deve chamar a função
   //   so_trata_interrupcao, com primeiro argumento um ptr para o SO
@@ -130,6 +150,12 @@ static void so_salva_estado_da_cpu(so_t *self)
   //   processo corrente. os valores dos registradores foram colocados pela
   //   CPU na memória, nos endereços IRQ_END_*
   // se não houver processo corrente, não faz nada
+  if(self->processo_atual != NULL) {
+    mem_le(self->mem, IRQ_END_PC, self->processo_atual->PC);
+    mem_le(self->mem, IRQ_END_A, self->processo_atual->A);
+    mem_le(self->mem, IRQ_END_X, self->processo_atual->X);
+    mem_le(self->mem, IRQ_END_complemento, self->processo_atual->complemento);
+  }
 }
 
 static void so_trata_pendencias(so_t *self)
@@ -147,6 +173,16 @@ static void so_escalona(so_t *self)
   //   corrente; pode continuar sendo o mesmo de antes ou não
   // t1: na primeira versão, escolhe um processo caso o processo corrente não possa continuar
   //   executando. depois, implementar escalonador melhor
+  if(self->processo_atual->vivo != true) {
+      // tem que trocar de processo
+      for(int i = 0; i <= PID; i++) {
+        if(self->processos[i].vivo) {
+          self->processo_atual = &self->processos[i];
+          return;
+        }
+    }
+  }
+    
 }
 
 static int so_despacha(so_t *self)
@@ -154,8 +190,22 @@ static int so_despacha(so_t *self)
   // t1: se houver processo corrente, coloca o estado desse processo onde ele
   //   será recuperado pela CPU (em IRQ_END_*) e retorna 0, senão retorna 1
   // o valor retornado será o valor de retorno de CHAMAC
-  if (self->erro_interno) return 1;
-  else return 0;
+
+  if(self->processo_atual == NULL) {
+    return 1;
+  } 
+  else {
+    mem_escreve(self->mem, IRQ_END_A, self->processo_atual->A);
+    mem_escreve(self->mem, IRQ_END_X, self->processo_atual->X);
+    mem_escreve(self->mem, IRQ_END_PC, self->processo_atual->PC);
+    mem_escreve(self->mem, IRQ_END_complemento, self->processo_atual->complemento);
+    mem_escreve(self->mem, IRQ_END_erro, self->processo_atual->erro);
+    mem_escreve(self->mem, IRQ_END_modo, usuario);
+
+    return 0;
+  }
+  //if (self->erro_interno) return 1;
+  //else return 0;
 }
 
 // TRATAMENTO DE UMA IRQ {{{1
